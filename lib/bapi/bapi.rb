@@ -1,15 +1,27 @@
+# frozen_string_literal: true
+
 # https://github.com/bunnyxt/pybiliapi/blob/master/pybiliapi/BiliApi.py
 
-require "lib/bvid"
+require './lib/bapi/bvid'
 require 'faraday'
 
 class Bapi
-  def self.get_video_view(vid)
-    _url_request('GET', "http://api.bilibili.com/x/web-interface/view?#{BVID.bvid?(vid)?"bvid=#{BVID.format(vid,:bvid)}":"aid=#{BVID.format(vid,:avid)}"}").body
+  def self.get_video_morestat(vid)
+    type = BVID.type(vid).first
+    vid = BVID.format vid
+    unless type == :unknown
+      _url_request('GET',
+                   "http://api.bilibili.com/x/web-interface/view?#{type}=#{vid}").body
+    end
   end
 
   def self.get_video_tags(vid)
-    _url_request('GET', "http://api.bilibili.com/x/tag/archive/tags?#{BVID.bvid?(vid)?"bvid=#{BVID.format(vid,:bvid)}":"aid=#{BVID.format(vid,:avid)}"}").body
+    type = BVID.type(vid).first
+    vid = BVID.format vid
+    unless type == :unknown
+      _url_request('GET',
+                   "http://api.bilibili.com/x/tag/archive/tags?#{type}=#{vid}").body
+    end
   end
 
   def self.get_video_pagelist(aid)
@@ -32,14 +44,10 @@ class Bapi
     _url_request('GET', "http://api.bilibili.com/archive_rank/getarchiverankbypartion?jsonp=jsonp&tid=#{tid}&pn=#{pn}&ps=#{ps}").body
   end
 
-  private
-
   def self._url_request(methmod, url)
     if methmod == 'GET'
-        res = Faraday.get(url)
-        if res.status = 200
-            return res
-        end
+      res = Faraday.get(url)
+      res if res.status == 200
     end
   end
 end
