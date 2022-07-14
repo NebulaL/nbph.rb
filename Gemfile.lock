@@ -1,0 +1,29 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    faraday (2.3.0)
+      faraday-net_http (~> 2.0)
+      ruby2_keywords (>= 0.0.4)
+    faraday-net_http (2.0.3)
+    little-plugger (1.1.4)
+    logging (2.3.1)
+      little-plugger (~> 1.1)
+      multi_json (~> 1.14)
+    multi_json (1.15.0)
+    oj (3.13.16)
+    pg (1.4.1)
+    ruby2_keywords (0.0.5)
+    sequel (5.58.0)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  faraday
+  logging
+  oj
+  pg
+  sequel
+
+BUNDLED WITH
+   2.3.17
