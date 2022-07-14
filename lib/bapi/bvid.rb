@@ -15,19 +15,19 @@ class BVID
   @@xor = 177_451_812
   @@add = 8_728_348_608
 
-  def self.to_avid(x)
+  def self.to_aid(bid)
     r = 0
     (0..5).each do |i|
-      r += @@tr[x[@@s[i]]] * 58**i
+      r += @@tr[bid[@@s[i]]] * 58**i
     end
     (r - @@add) ^ @@xor
   end
 
-  def self.to_bvid(x)
-    x = (x ^ @@xor) + @@add
+  def self.to_bvid(aid)
+    aid = (aid ^ @@xor) + @@add
     r = ['B', 'V', '1', ' ', ' ', '4', ' ', '1', ' ', '7', ' ', ' ']
     (0..5).each do |i|
-      r[@@s[i]] = @@table[x / 58**i % 58]
+      r[@@s[i]] = @@table[aid / 58**i % 58]
     end
     r.join
   end
@@ -42,24 +42,24 @@ class BVID
   def self.type(vid)
     case vid
     when Integer
-      %i[avid num] if vid.positive?
+      return %i[aid num] if vid.positive?
     when String
       case vid
-      when /[Aa][Vv]\d+/
-        %i[avid str_with_prefix]
-      when /\d+/
-        %i[avid str]
-      when /[Bb][Vv]1[a-zA-Z0-9]{2,2}4[a-zA-Z0-9]{3,3}7[a-zA-Z0-9]{2,3}/
-        %i[bvid str_with_prefix]
-      when /1[a-zA-Z0-9]{2,2}4[a-zA-Z0-9]{3,3}7[a-zA-Z0-9]{2,3}/
-        %i[bvid str]
+      when /^[Aa][Vv]\d+$/
+        return %i[aid str_with_prefix]
+      when /^\d+$/
+        return %i[aid str]
+      when /^[Bb][Vv]1[a-zA-Z0-9]{2,2}4[a-zA-Z0-9]{3,3}7[a-zA-Z0-9]{2,3}$/
+        return %i[bvid str_with_prefix]
+      when /^1[a-zA-Z0-9]{2,2}4[a-zA-Z0-9]{3,3}7[a-zA-Z0-9]{2,3}$/
+        return %i[bvid str]
       end
     end
     %i[unknown unknown]
   end
 
-  def self.avid?(vid)
-    type(vid).first == :avid
+  def self.aid?(vid)
+    type(vid).first == :aid
   end
 
   def self.bvid?(vid)
@@ -73,7 +73,7 @@ class BVID
       return format(vid, nil) if type == vid_type
 
       case vid_type
-      when :avid
+      when :aid
         case type
         when :bvid
           to_bvid(format(vid, nil))
@@ -82,18 +82,18 @@ class BVID
         end
       when :bvid
         case type
-        when :avid
-          to_avid(format(vid, nil))
+        when :aid
+          to_aid(format(vid, nil))
         else
           raise TypeError, "can not convert #{vid} to type #{type}"
         end
       end
-    else
+    elsif type
       raise TypeError, 'type should be a symbol'
     end
 
     case vid_type
-    when :avid
+    when :aid
       case vid_format
       when :num
         vid
