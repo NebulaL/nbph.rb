@@ -1,10 +1,11 @@
 require "http/client"
 require "json"
 require "yaml"
-#require "db"
-#require "pg"
+# require "db"
+# require "pg"
 require "dexter"
-#require "ansi-escapes"
+
+# require "ansi-escapes"
 
 def get_archive_rank_by_partion(tid, pn, ps)
   HTTP::Client.get("http://api.bilibili.com/archive_rank/getarchiverankbypartion?jsonp=jsonp&tid=#{tid}&pn=#{pn}&ps=#{ps}").body
@@ -14,18 +15,18 @@ dir = "dat/active"
 Dir.mkdir_p(dir)
 
 # setup log
-logfile = File.open("#{dir}/log.json","w")
+logfile = File.open("#{dir}/log.json", "w")
 backend = Log::IOBackend.new(io: logfile)
 backend.formatter = Dexter::JSONLogFormatter.proc
 Log.dexter.configure(:info, backend)
 
 # read config
-#Config = YAML.parse File.read "bcd-config.yml"
+# Config = YAML.parse File.read "bcd-config.yml"
 
 # connect db
-#Db = DB.open("postgres://#{Config["db"]["user"].as_s}:@#{Config["db"]["host"].as_s}:#{Config["db"]["port"].as_i}/#{Config["db"]["db"].as_s}")
+# Db = DB.open("postgres://#{Config["db"]["user"].as_s}:@#{Config["db"]["host"].as_s}:#{Config["db"]["port"].as_i}/#{Config["db"]["db"].as_s}")
 
-#dbcnt = Db.query_one("SELECT count(aid) FROM videos",as: Int64)
+# dbcnt = Db.query_one("SELECT count(aid) FROM videos",as: Int64)
 
 # get page_count
 response = get_archive_rank_by_partion(30, 1, 1)
@@ -35,7 +36,7 @@ Log.dexter.info { {page_count: page_count, info: "page_count"} }
 
 target = (page_count/50).to_i
 tasks_per_task = ARGV[0].to_i
-target+=(tasks_per_task-(target%tasks_per_task))
+target += (tasks_per_task - (target % tasks_per_task))
 tasks = (target / tasks_per_task).to_i
 Log.dexter.info { {fibernum: tasks, info: "dl_fibers"} }
 
@@ -52,7 +53,7 @@ tasks.times do |x|
       res = get_archive_rank_by_partion(30, pn, 50)
       unless res[8] == '0'
         Log.dexter.warn { {fiberid: x.to_i64, pn: pn.to_i64, code: res[8].to_s, info: "dl_page_code_neq_0_recall"} }
-        while ! res[8] == '0'
+        while !res[8] == '0'
           sleep 0.001
           res = get_archive_rank_by_partion(30, pn, 50)
         end
@@ -81,7 +82,6 @@ while crl.size < target
   Fiber.yield
 end
 
-File.write "#{dir}/info.yml",info.to_yaml
+File.write "#{dir}/info.yml", info.to_yaml
 
 system "notify-send end"
-
