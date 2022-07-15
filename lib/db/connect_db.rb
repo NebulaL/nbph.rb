@@ -2,9 +2,9 @@
 
 require 'pg'
 require 'sequel'
-require './lib/conf/conf'
 
-DB = Sequel.connect(adapter: :postgres, user: CONFIG['db']['user'], password: CONFIG['db']['password'],
-                    host: CONFIG['db']['host'], port: CONFIG['db']['port'], database: CONFIG['db']['dbname'],
-                    max_connections: CONFIG['db']['max_connections'] || 10)
-
+def connect_db(config)
+  Sequel.connect(adapter: :postgres, user: config['db']['user'], password: config['db']['password'],
+                 host: config['db']['host'], port: config['db']['port'], database: config['db']['dbname'],
+                 max_connections: config['db']['max_connections'] || 10)
+end

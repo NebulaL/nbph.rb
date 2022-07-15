@@ -1,7 +1,12 @@
-require './lib/db/connect_db.rb'
+# frozen_string_literal: true
 
-DB.create_table :nbph do
-    primary_key :aid
+require './lib/db/connect_db'
+
+def create_table_nbph(config)
+  db = connect_db(config)
+  db.create_table :nbph do
+    Bignum :aid
     Integer :tid
     Time :create
+  end
 end
