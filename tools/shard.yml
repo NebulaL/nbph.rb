@@ -1,0 +1,25 @@
+name: spider
+version: 0.1.0
+
+authors:
+  - Nebula L <y1x2h3@163.com>
+
+dependencies:
+  db:
+    github: crystal-lang/crystal-db
+  pg:
+    github: will/crystal-pg
+  kemal:
+    github: kemalcr/kemal
+  dexter:
+    github: luckyframework/dexter
+
+targets:
+  getdata:
+    main: src/getdata.cr
+  server:
+    main: src/server.cr
+
+crystal: 1.5.0
+
+license: LGPL-3.0
