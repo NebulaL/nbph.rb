@@ -7,7 +7,7 @@ require 'oj'
 require 'time'
 
 # TODO: logging
-def init_via_bapi(config)
+def init_via_bapi(config, dir)
   db = connect_db(config)
   table_nbph = db[:nbph]
   tid = config['spider']['tid']
@@ -38,9 +38,10 @@ def init_via_bapi(config)
       video_list.push({ aid: aid, tid: tid, create: create + last_create_ts_offset })
       aid_list.push(aid)
     end
-    video_list.each do |video|
-      table_nbph.insert(video)
-    end
+    # video_list.each do |video|
+    #   table_nbph.insert(video)
+    # end
+    table_nbph.multi_insert video_list
     page_total = (current_page['data']['page']['count'] / 50) + 1
     puts "Page #{page_num} / #{page_total} done."
     page_num += 1
