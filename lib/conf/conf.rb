@@ -6,4 +6,4 @@ require 'yaml'
 CONFIG_PATH = './config.yml'
 CONFIG = YAML.safe_load File.read(CONFIG_PATH)
 
-$renv = Hash.new
+$renv = {}
