@@ -26,7 +26,7 @@ def routine_update_via_bapi(config)
   table_nbph = db[:nbph]
   tid = config['spider']['tid']
 
-  last_aids = table_nbph.order(:create).limit(10).map(:aid)
+  last_aids = table_nbph.reverse(:create).limit(25).map(:aid)
 
   page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
   page_total = (page['data']['page']['count'] / 50.0).ceil
@@ -36,9 +36,10 @@ def routine_update_via_bapi(config)
   last_create_ts = 0
   last_create_ts_offset = 59
   new_video_count = 0
+
   catch :last_aids_includes_current_aid do
     loop do
-      break if page_num <= page_total
+      break unless page_num <= page_total
 
       page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
 
@@ -48,13 +49,17 @@ def routine_update_via_bapi(config)
         sleep 1
         page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
       end
+
       aid_list = []
       video_list = []
       page['data']['archives'].each do |video|
         aid = video['aid'].to_i
         create = Time.parse(video['create'])
 
-        throw :last_aids_includes_current_aid if last_aids.include? aid
+        if last_aids.include? aid
+          p "Meet aid = #{aid} in last_aids, break."
+          throw :last_aids_includes_current_aid
+        end
 
         unless last_aid_list.include? aid
           if create == last_create_ts
@@ -63,15 +68,16 @@ def routine_update_via_bapi(config)
             last_create_ts = create
             last_create_ts_offset = 59
           end
-          video_list.push({ aid: aid, tid: tid, create: create + last_create_ts_offset })
+          unless table_nbph.where(aid: aid)
+            video_list.push({ aid: aid, tid: tid,
+                              create: create + last_create_ts_offset })
+          end
           aid_list.push(aid)
           new_video_count += 1
-          video_list.push(video)
         end
-        video_list.each do |video|
-          table_nbph.insert(video)
-        end
-        page_total = (current_page['data']['page']['count'] / 50) + 1
+        table_nbph.multi_insert(video_list)
+
+        page_total = (page['data']['page']['count'] / 50) + 1
         page_num += 1
       end
     end
@@ -101,10 +107,9 @@ def routine_update_via_bapi(config)
 
       page_aids = page['data']['archives'].collect { |i| i.fetch :aid }
 
-      create_ts_from = Time.parse(page['data']['archives'][0]['create']) + 59 # bigger one
-      create_ts_to = Time.parse(page['data']['archives'][-1]['create']) # smaller one
+      create_ts_from = Time.parse(page['data']['archives'][0]['create']) + 59
+      create_ts_to = Time.parse(page['data']['archives'][-1]['create'])
 
-      # get db aids
       db_videos = table_nbph.where(create: create_ts_from..create_ts_to)
       db_aids = db_videos.map(:aid)
       unsettled_diff_aids.each do |aid|
@@ -119,7 +124,6 @@ def routine_update_via_bapi(config)
             end
           end
           if create_ts_to <= create && create <= create_ts_to + 59
-          # maybe in next page
           else
             table_nbph.where(aid: aid).delete
 
