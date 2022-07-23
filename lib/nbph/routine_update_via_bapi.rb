@@ -3,6 +3,7 @@
 require './lib/conf/conf'
 require './lib/bapi/bapi'
 require './lib/db/connect_db'
+require './lib/log/log'
 require 'oj'
 require 'time'
 
@@ -16,7 +17,12 @@ def is_aid_exist(aid)
 end
 
 def routine_update_via_bapi(config)
+  logger = get_logger('upd')
+
+  logger.info "Now start routine update ,tid=#{config['spider']['tid']}"
+
   if $renv['is_updating']
+    logger.warn 'Lase round has not finished, stop this round'
     return
   else
     $renv['is_updating'] = true
@@ -26,7 +32,10 @@ def routine_update_via_bapi(config)
   table_nbph = db[:nbph]
   tid = config['spider']['tid']
 
+  logger.info "Now start add new video with tid #{tid}"
+
   last_aids = table_nbph.reverse(:create).limit(25).map(:aid)
+  logger.info "Get last aids: #{last_aids}"
 
   page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
   page_total = (page['data']['page']['count'] / 50.0).ceil
@@ -46,6 +55,7 @@ def routine_update_via_bapi(config)
       loop do
         break if page['data']['archives'].is_a? Array
 
+        logger.warn "pn=#{page_num}, page['data']['archives'] isn't a Array, re-call after 1s"
         sleep 1
         page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
       end
@@ -57,11 +67,11 @@ def routine_update_via_bapi(config)
         create = Time.parse(video['create'])
 
         if last_aids.include? aid
-          p "Meet aid = #{aid} in last_aids, break."
+          logger.info "Meet aid = #{aid} in last_aids, break."
           throw :last_aids_includes_current_aid
         end
 
-        unless last_aid_list.include? aid
+        if !last_aid_list.include? aid
           if create == last_create_ts
             last_create_ts_offset -= 1 if last_create_ts_offset.positive?
           else
@@ -71,9 +81,12 @@ def routine_update_via_bapi(config)
           unless table_nbph.where(aid: aid)
             video_list.push({ aid: aid, tid: tid,
                               create: create + last_create_ts_offset })
+            logger.info "Add new video #{video_list.last}"
           end
           aid_list.push(aid)
           new_video_count += 1
+        else
+          logger.warn "Aid #{aid} alreday added"
         end
         table_nbph.multi_insert(video_list)
 
@@ -83,13 +96,24 @@ def routine_update_via_bapi(config)
     end
   end
 
-  count_db = table_nbph.count
+  if new_video_count.zero?
+    logger.info "No new video found with #{tid} tid."
+  else
+    logger.info "#{new_video_count} new video(s) found with #{tid} tid."
+  end
+  logger.info "Finish add new video with tid #{tid}"
+
+  logger.info "Now start delete invalid video with tid #{tid}"
+
+  db_count = table_nbph.count
 
   page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
-  count_api = page['data']['page']['count'].to_i
-  page_total = (count_api / 50.0).ceil
+  bapi_count = page['data']['page']['count'].to_i
+  page_total = (bapi_count / 50.0).ceil
 
-  invalid_count = count_db - count_api
+  logger.info "Get db_count=#{db_count}, bapi_count=#{bapi_count}"
+
+  invalid_count = db_count - bapi_count
   if invalid_count.positive?
     page_num = 1
     unsettled_diff_aids = []
@@ -101,6 +125,7 @@ def routine_update_via_bapi(config)
       loop do
         break if page['data']['archives'].is_a? Array
 
+        logger.warn "pn=#{page_num}, page['data']['archives'] isn't a Array, re-call after 1s"
         sleep 1
         page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
       end
@@ -122,12 +147,17 @@ def routine_update_via_bapi(config)
                 break
               end
             end
+          else
+            logger.warn "Cannot find unsettled diff aid #{aid} in db_aids #{db_aids}"
           end
           if create_ts_to <= create && create <= create_ts_to + 59
+            logger.info "Remain aid #{aid} in unsettled list"
           else
             table_nbph.where(aid: aid).delete
+            logger.info "Delete unsettled invalid aid #{aid}."
 
             if is_aid_valid(aid)
+              logger.warn "Aid #{aid} is not invalid! Do not remove it."
             else
               unsettled_diff_aids.delete(aid)
               invalid_count -= 1
@@ -135,32 +165,41 @@ def routine_update_via_bapi(config)
           end
         else
           unsettled_diff_aids.delete(aid)
+          logger.info "Save unsettled aid #{aid}"
         end
       end
 
       diff_aids = db_aids - page_aids
       new_aids = page_aids - db_aids
 
-      next if diff_aids.empty?
+      if !diff_aids.empty?
 
-      diff_aids.each do |aid|
-        create = -1
-        db_videos.each do |v|
-          if v.aid == aid
-            create = v.create
-            break
+        diff_aids.each do |aid|
+          create = -1
+          db_videos.each do |v|
+            if v.aid == aid
+              create = v.create
+              break
+            end
+          end
+          if create_ts_to <= create && create <= create_ts_to + 59
+            unsettled_diff_aids.push(aid)
+            logger.info "Add aid #{aid} to unsettled list"
+          elsif create_ts_from - 59 <= create && create <= create_ts_from
+            # counted in last page
+            next
+          else
+            logger.info "Delete invalid aid #{aid}"
+            if is_aid_valid(aid)
+              logger.warn "Aid #{aid} is not invalid, do not remove it"
+            else
+              table_nbph.where(aid: aid).delete
+              invalid_count -= 1
+            end
           end
         end
-        if create_ts_to <= create && create <= create_ts_to + 59
-          unsettled_diff_aids.push(aid)
-        elsif create_ts_from - 59 <= create && create <= create_ts_from
-          # counted in last page
-          next
-        elsif is_aid_valid(aid)
-        else
-          table_nbph.where(aid: aid).delete
-          invalid_count -= 1
-        end
+      else
+        logger.info "No diff aid"
       end
 
       last_create_ts = 0
@@ -179,15 +218,22 @@ def routine_update_via_bapi(config)
           end
           create_ts += last_create_ts_offset
           video = { aid: aid, tid: tid, create: create + last_create_ts_offset }
+          logger.warn "Add ne video #{video} during finding invalid aid"
           table_nbph.insert({ aid: aid, tid: tid, create: create })
           break
         end
       end
 
       page_total = (page['data']['page']['count'] / 50.0).ceil
+      logger.info "Page #{page_num}/#{page_total} done, #{invalid_count} invalid aid left"
       page_num += 1
     end
+  else
+    logger.info "No invalid video to delete"
   end
+  logger.info "Finish delete invalid video with tid #{tid}!"
+
+  logger.info "Finish routine update #{tid} tid."
 ensure
   $renv['is_updating'] = false
 end

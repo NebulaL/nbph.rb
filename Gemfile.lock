@@ -10,7 +10,7 @@ GEM
       little-plugger (~> 1.1)
       multi_json (~> 1.14)
     multi_json (1.15.0)
-    oj (3.13.16)
+    oj (3.13.17)
     pg (1.4.1)
     ruby2_keywords (0.0.5)
     sequel (5.58.0)
