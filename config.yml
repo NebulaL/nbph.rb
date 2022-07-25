@@ -6,3 +6,8 @@ db:
   dbname: nbph
 spider:
   tid: 30
+log:
+  appenders:
+    - devel.log
+    - stdout
+  level: debug
