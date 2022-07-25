@@ -1,32 +1,32 @@
 # frozen_string_literal: true
 
-require "./lib/conf/conf"
-require "./lib/bapi/bapi"
-require "./lib/db/connect_db"
-require "./lib/log/log"
-require "oj"
-require "time"
+require './lib/conf/conf'
+require './lib/bapi/bapi'
+require './lib/db/connect_db'
+require './lib/log/log'
+require 'oj'
+require 'time'
 
 def is_aid_exist(aid)
   view = Bapi.get_video_morestat(aid)
-  (view["code"]).zero? ? True : False
+  (view['code']).zero? ? True : False
 end
 
 def routine_update_via_bapi(config)
-  logger = get_logger("upd")
+  logger = get_logger('upd')
 
-  logger.info "Now start routine update ,tid=#{config["spider"]["tid"]}"
+  logger.info "Now start routine update ,tid=#{config['spider']['tid']}"
 
-  if $renv["is_updating"]
-    logger.warn "Lase round has not finished, stop this round"
+  if $renv['is_updating']
+    logger.warn 'Lase round has not finished, stop this round'
     return
   else
-    $renv["is_updating"] = true
+    $renv['is_updating'] = true
   end
 
   db = connect_db(config)
   table_nbph = db[:nbph]
-  tid = config["spider"]["tid"]
+  tid = config['spider']['tid']
 
   logger.info "Now start add new video with tid #{tid}"
 
@@ -34,7 +34,7 @@ def routine_update_via_bapi(config)
   logger.info "Get last aids: #{last_aids}"
 
   page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
-  page_total = (page["data"]["page"]["count"] / 50.0).ceil
+  page_total = (page['data']['page']['count'] / 50.0).ceil
 
   page_num = 1
   last_aid_list = []
@@ -49,7 +49,7 @@ def routine_update_via_bapi(config)
       page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
 
       loop do
-        break if page["data"]["archives"].is_a? Array
+        break if page['data']['archives'].is_a? Array
 
         logger.warn "pn=#{page_num}, page['data']['archives'] isn't a Array, re-call after 1s"
         sleep 1
@@ -58,9 +58,9 @@ def routine_update_via_bapi(config)
 
       aid_list = []
       video_list = []
-      page["data"]["archives"].each do |video|
-        aid = video["aid"].to_i
-        create = Time.parse(video["create"])
+      page['data']['archives'].each do |video|
+        aid = video['aid'].to_i
+        create = Time.parse(video['create'])
 
         if last_aids.include? aid
           logger.info "Meet aid = #{aid} in last_aids, break."
@@ -74,20 +74,19 @@ def routine_update_via_bapi(config)
             last_create_ts = create
             last_create_ts_offset = 59
           end
-          unless table_nbph.where(aid: aid)
-            video_list.push(
+          if table_nbph.where(aid: aid).empty?
+            video =
               { aid: aid, tid: tid, create: create + last_create_ts_offset }
-            )
-            logger.info "Add new video #{video_list.last}"
+            table_nbph.insert(video)
+            logger.info "Add new video #{video}"
           end
           aid_list.push(aid)
           new_video_count += 1
         else
           logger.warn "Aid #{aid} alreday added"
         end
-        table_nbph.multi_insert(video_list)
 
-        page_total = (page["data"]["page"]["count"] / 50) + 1
+        page_total = (page['data']['page']['count'] / 50) + 1
         page_num += 1
       end
     end
@@ -105,7 +104,7 @@ def routine_update_via_bapi(config)
   db_count = table_nbph.count
 
   page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
-  bapi_count = page["data"]["page"]["count"].to_i
+  bapi_count = page['data']['page']['count'].to_i
   page_total = (bapi_count / 50.0).ceil
 
   logger.info "Get db_count=#{db_count}, bapi_count=#{bapi_count}"
@@ -120,17 +119,17 @@ def routine_update_via_bapi(config)
       page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
 
       loop do
-        break if page["data"]["archives"].is_a? Array
+        break if page['data']['archives'].is_a? Array
 
         logger.warn "pn=#{page_num}, page['data']['archives'] isn't a Array, re-call after 1s"
         sleep 1
         page = Oj.load(Bapi.get_archive_rank_by_partion(tid, 1, 50))
       end
 
-      page_aids = page["data"]["archives"].collect { |i| i.fetch :aid }
+      page_aids = page['data']['archives'].collect { |i| i.fetch :aid }
 
-      create_ts_from = Time.parse(page["data"]["archives"][0]["create"]) + 59
-      create_ts_to = Time.parse(page["data"]["archives"][-1]["create"])
+      create_ts_from = Time.parse(page['data']['archives'][0]['create']) + 59
+      create_ts_to = Time.parse(page['data']['archives'][-1]['create'])
 
       db_videos = table_nbph.where(create: create_ts_from..create_ts_to)
       db_aids = db_videos.map(:aid)
@@ -195,16 +194,16 @@ def routine_update_via_bapi(config)
           end
         end
       else
-        logger.info "No diff aid"
+        logger.info 'No diff aid'
       end
 
       last_create_ts = 0
       last_create_ts_offset = 59
       new_aids.each do |aid|
-        page["data"]["archives"].each do |video|
-          next unless video["aid"].to_i == aid
+        page['data']['archives'].each do |video|
+          next unless video['aid'].to_i == aid
 
-          create = Time.parse video["create"]
+          create = Time.parse video['create']
           create_ts = create_time_to_ts(create)
           if create == last_create_ts
             last_create_ts_offset -= 1 if last_create_ts_offset.positive?
@@ -220,16 +219,16 @@ def routine_update_via_bapi(config)
         end
       end
 
-      page_total = (page["data"]["page"]["count"] / 50.0).ceil
+      page_total = (page['data']['page']['count'] / 50.0).ceil
       logger.info "Page #{page_num}/#{page_total} done, #{invalid_count} invalid aid left"
       page_num += 1
     end
   else
-    logger.info "No invalid video to delete"
+    logger.info 'No invalid video to delete'
   end
   logger.info "Finish delete invalid video with tid #{tid}!"
 
   logger.info "Finish routine update #{tid} tid."
 ensure
-  $renv["is_updating"] = false
+  $renv['is_updating'] = false
 end
