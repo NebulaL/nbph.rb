@@ -7,3 +7,5 @@ gem "oj"
 gem "logging"
 gem "pg"
 gem "sequel"
+
+gem "ruby-lsp", "~> 0.2.0", :group => :development
