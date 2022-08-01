@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "./lib/db/connect_db"
+require './lib/db/connect_db'
 
 def create_table_nbph(config)
   db = connect_db(config)

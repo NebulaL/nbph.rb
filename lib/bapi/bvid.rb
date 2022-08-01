@@ -1,66 +1,66 @@
 # frozen_string_literal: true
 
 class BVID
-  @@table = "fZodR9XQDSUm21yCkr6zBqiveYah8bt4xsWpHnJE7jL5VG3guMTKNPAwcF"
+  @@table = 'fZodR9XQDSUm21yCkr6zBqiveYah8bt4xsWpHnJE7jL5VG3guMTKNPAwcF'
   @@tr = {
-    "f" => 0,
-    "Z" => 1,
-    "o" => 2,
-    "d" => 3,
-    "R" => 4,
-    "9" => 5,
-    "X" => 6,
-    "Q" => 7,
-    "D" => 8,
-    "S" => 9,
-    "U" => 10,
-    "m" => 11,
-    "2" => 12,
-    "1" => 13,
-    "y" => 14,
-    "C" => 15,
-    "k" => 16,
-    "r" => 17,
-    "6" => 18,
-    "z" => 19,
-    "B" => 20,
-    "q" => 21,
-    "i" => 22,
-    "v" => 23,
-    "e" => 24,
-    "Y" => 25,
-    "a" => 26,
-    "h" => 27,
-    "8" => 28,
-    "b" => 29,
-    "t" => 30,
-    "4" => 31,
-    "x" => 32,
-    "s" => 33,
-    "W" => 34,
-    "p" => 35,
-    "H" => 36,
-    "n" => 37,
-    "J" => 38,
-    "E" => 39,
-    "7" => 40,
-    "j" => 41,
-    "L" => 42,
-    "5" => 43,
-    "V" => 44,
-    "G" => 45,
-    "3" => 46,
-    "g" => 47,
-    "u" => 48,
-    "M" => 49,
-    "T" => 50,
-    "K" => 51,
-    "N" => 52,
-    "P" => 53,
-    "A" => 54,
-    "w" => 55,
-    "c" => 56,
-    "F" => 57
+    'f' => 0,
+    'Z' => 1,
+    'o' => 2,
+    'd' => 3,
+    'R' => 4,
+    '9' => 5,
+    'X' => 6,
+    'Q' => 7,
+    'D' => 8,
+    'S' => 9,
+    'U' => 10,
+    'm' => 11,
+    '2' => 12,
+    '1' => 13,
+    'y' => 14,
+    'C' => 15,
+    'k' => 16,
+    'r' => 17,
+    '6' => 18,
+    'z' => 19,
+    'B' => 20,
+    'q' => 21,
+    'i' => 22,
+    'v' => 23,
+    'e' => 24,
+    'Y' => 25,
+    'a' => 26,
+    'h' => 27,
+    '8' => 28,
+    'b' => 29,
+    't' => 30,
+    '4' => 31,
+    'x' => 32,
+    's' => 33,
+    'W' => 34,
+    'p' => 35,
+    'H' => 36,
+    'n' => 37,
+    'J' => 38,
+    'E' => 39,
+    '7' => 40,
+    'j' => 41,
+    'L' => 42,
+    '5' => 43,
+    'V' => 44,
+    'G' => 45,
+    '3' => 46,
+    'g' => 47,
+    'u' => 48,
+    'M' => 49,
+    'T' => 50,
+    'K' => 51,
+    'N' => 52,
+    'P' => 53,
+    'A' => 54,
+    'w' => 55,
+    'c' => 56,
+    'F' => 57
   }
   @@s = [11, 10, 3, 8, 4, 6]
   @@xor = 177_451_812
@@ -74,7 +74,7 @@ class BVID
 
   def self.to_bvid(aid)
     aid = (aid ^ @@xor) + @@add
-    r = ["B", "V", "1", " ", " ", "4", " ", "1", " ", "7", " ", " "]
+    r = ['B', 'V', '1', ' ', ' ', '4', ' ', '1', ' ', '7', ' ', ' ']
     (0..5).each { |i| r[@@s[i]] = @@table[aid / 58**i % 58] }
     r.join
   end
@@ -136,7 +136,7 @@ class BVID
         end
       end
     elsif type
-      raise TypeError, "type should be a symbol"
+      raise TypeError, 'type should be a symbol'
     end
 
     case vid_type
@@ -147,12 +147,12 @@ class BVID
       when :str
         vid.to_i
       when :str_with_prefix
-        vid.sub(/[Aa][Vv]/, "").to_i
+        vid.sub(/[Aa][Vv]/, '').to_i
       end
     when :bvid
       case vid_format
       when :str_with_prefix
-        vid.sub(/[Bb][Vv]/, "BV")
+        vid.sub(/[Bb][Vv]/, 'BV')
       when :str
         "BV#{vid}"
       end

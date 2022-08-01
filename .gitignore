@@ -36,3 +36,7 @@
 
 tools/bin
 tools/lib
+
+
+*.log*
+config.yml
