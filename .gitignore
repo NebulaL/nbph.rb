@@ -40,3 +40,4 @@ tools/lib
 
 *.log*
 config.yml
+nbph.db

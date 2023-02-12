@@ -1,7 +1,7 @@
 db:
   user:
   password:
-  host: localhost
+  host: sqlite
   port: 5432
   dbname: nbph
 spider:

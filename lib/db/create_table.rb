@@ -8,5 +8,6 @@ def create_table_nbph(config)
     Bignum :aid
     Integer :tid
     Time :create
+    Interger :c_seq
   end
 end
